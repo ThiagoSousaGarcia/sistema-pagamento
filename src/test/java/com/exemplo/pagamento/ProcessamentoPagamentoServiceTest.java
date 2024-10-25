@@ -2,8 +2,8 @@ package com.exemplo.pagamento.service;
 
 import com.exemplo.pagamento.domain.Cobranca;
 import com.exemplo.pagamento.domain.Pagamento;
-import com.exemplo.pagamento.domain.PagamentoRequest;
-import com.exemplo.pagamento.exception.ResourceNotFoundException;
+import com.exemplo.pagamento.domain.PagamentoStatus;
+import com.exemplo.pagamento.dto.PagamentoRequest;
 import com.exemplo.pagamento.repository.CobrancaRepository;
 import com.exemplo.pagamento.repository.VendedorRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,101 +15,96 @@ import org.mockito.MockitoAnnotations;
 import java.util.Collections;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class ProcessamentoPagamentoServiceTest {
-
-    @InjectMocks
-    private ProcessamentoPagamentoService processamentoPagamentoService;
-
-    @Mock
-    private VendedorRepository vendedorRepository;
 
     @Mock
     private CobrancaRepository cobrancaRepository;
 
     @Mock
-    private SqsService sqsService;
+    private VendedorRepository vendedorRepository;
+
+    @Mock
+    private SQSService sqsService;
+
+    @InjectMocks
+    private ProcessamentoPagamentoService processamentoPagamentoService;
 
     @BeforeEach
-    void setUp() {
+    void setup() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void deveProcessarPagamentosComSucesso() {
-        String codigoVendedor = "vendedor1";
-        Pagamento pagamento = new Pagamento("cobranca1", 100);
-        PagamentoRequest pagamentoRequest = new PagamentoRequest(codigoVendedor, Collections.singletonList(pagamento));
+    void deveLancarExcecaoQuandoVendedorNaoExiste() {
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("codigo_invalido", Collections.emptyList());
 
-        when(vendedorRepository.existsByCodigo(codigoVendedor)).thenReturn(true);
-        when(cobrancaRepository.findByCodigo("cobranca1")).thenReturn(Optional.of(new Cobranca("cobranca1", 100)));
+        when(vendedorRepository.existsByCodigo("codigo_invalido")).thenReturn(false);
 
-        PagamentoRequest resultado = processamentoPagamentoService.processarPagamentos(pagamentoRequest);
-
-        assertEquals("Pagamento Total", resultado.getPagamentos().get(0).getStatus());
-        verify(sqsService, times(1)).enviarMensagem(anyString(), eq("Pagamento Total"));
+        assertThrows(RuntimeException.class, () ->
+                processamentoPagamentoService.processarPagamentos(pagamentoRequest));
     }
 
     @Test
-    void deveRetornarErroQuandoVendedorNaoEncontrado() {
-        String codigoVendedor = "vendedor1";
-        Pagamento pagamento = new Pagamento("cobranca1", 100);
-        PagamentoRequest pagamentoRequest = new PagamentoRequest(codigoVendedor, Collections.singletonList(pagamento));
+    void deveLancarExcecaoQuandoCobrancaNaoExiste() {
+        Pagamento pagamento = new Pagamento("codigo_invalido", 100.0);
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("codigo_vendedor", Collections.singletonList(pagamento));
 
-        when(vendedorRepository.existsByCodigo(codigoVendedor)).thenReturn(false);
+        when(vendedorRepository.existsByCodigo("codigo_vendedor")).thenReturn(true);
+        when(cobrancaRepository.findByCodigo("codigo_invalido")).thenReturn(Optional.empty());
 
-        Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
-            processamentoPagamentoService.processarPagamentos(pagamentoRequest);
-        });
-
-        assertEquals("Vendedor não encontrado", exception.getMessage());
+        assertThrows(RuntimeException.class, () ->
+                processamentoPagamentoService.processarPagamentos(pagamentoRequest));
     }
 
     @Test
-    void deveRetornarErroQuandoCobrancaNaoEncontrada() {
-        String codigoVendedor = "vendedor1";
-        Pagamento pagamento = new Pagamento("cobranca1", 100);
-        PagamentoRequest pagamentoRequest = new PagamentoRequest(codigoVendedor, Collections.singletonList(pagamento));
+    void deveProcessarPagamentoParcial() {
+        Pagamento pagamento = new Pagamento("codigo_cobranca", 50.0);
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("codigo_vendedor", Collections.singletonList(pagamento));
 
-        when(vendedorRepository.existsByCodigo(codigoVendedor)).thenReturn(true);
-        when(cobrancaRepository.findByCodigo("cobranca1")).thenReturn(Optional.empty());
+        Cobranca cobranca = new Cobranca("codigo_cobranca", 100.0);
 
-        Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
-            processamentoPagamentoService.processarPagamentos(pagamentoRequest);
-        });
+        when(vendedorRepository.existsByCodigo("codigo_vendedor")).thenReturn(true);
+        when(cobrancaRepository.findByCodigo("codigo_cobranca")).thenReturn(Optional.of(cobranca));
 
-        assertEquals("Cobrança não encontrada", exception.getMessage());
+        processamentoPagamentoService.processarPagamentos(pagamentoRequest);
+
+        assertEquals(PagamentoStatus.PARCIAL, pagamento.getStatus());
+        verify(sqsService).enviarMensagem(pagamento.toString(), PagamentoStatus.PARCIAL);
     }
 
     @Test
-    void deveIdentificarPagamentoParcial() {
-        String codigoVendedor = "vendedor1";
-        Pagamento pagamento = new Pagamento("cobranca1", 50);
-        PagamentoRequest pagamentoRequest = new PagamentoRequest(codigoVendedor, Collections.singletonList(pagamento));
+    void deveProcessarPagamentoTotal() {
+        Pagamento pagamento = new Pagamento("codigo_cobranca", 100.0);
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("codigo_vendedor", Collections.singletonList(pagamento));
 
-        when(vendedorRepository.existsByCodigo(codigoVendedor)).thenReturn(true);
-        when(cobrancaRepository.findByCodigo("cobranca1")).thenReturn(Optional.of(new Cobranca("cobranca1", 100)));
+        Cobranca cobranca = new Cobranca("codigo_cobranca", 100.0);
 
-        PagamentoRequest resultado = processamentoPagamentoService.processarPagamentos(pagamentoRequest);
+        when(vendedorRepository.existsByCodigo("codigo_vendedor")).thenReturn(true);
+        when(cobrancaRepository.findByCodigo("codigo_cobranca")).thenReturn(Optional.of(cobranca));
 
-        assertEquals("Pagamento Parcial", resultado.getPagamentos().get(0).getStatus());
-        verify(sqsService, times(1)).enviarMensagem(anyString(), eq("Pagamento Parcial"));
+        processamentoPagamentoService.processarPagamentos(pagamentoRequest);
+
+        assertEquals(PagamentoStatus.TOTAL, pagamento.getStatus());
+        verify(sqsService).enviarMensagem(pagamento.toString(), PagamentoStatus.TOTAL);
     }
 
     @Test
-    void deveIdentificarPagamentoExcedente() {
-        String codigoVendedor = "vendedor1";
-        Pagamento pagamento = new Pagamento("cobranca1", 150);
-        PagamentoRequest pagamentoRequest = new PagamentoRequest(codigoVendedor, Collections.singletonList(pagamento));
+    void deveProcessarPagamentoExcedente() {
+        Pagamento pagamento = new Pagamento("codigo_cobranca", 150.0);
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("codigo_vendedor", Collections.singletonList(pagamento));
 
-        when(vendedorRepository.existsByCodigo(codigoVendedor)).thenReturn(true);
-        when(cobrancaRepository.findByCodigo("cobranca1")).thenReturn(Optional.of(new Cobranca("cobranca1", 100)));
+        Cobranca cobranca = new Cobranca("codigo_cobranca", 100.0);
 
-        PagamentoRequest resultado = processamentoPagamentoService.processarPagamentos(pagamentoRequest);
+        when(vendedorRepository.existsByCodigo("codigo_vendedor")).thenReturn(true);
+        when(cobrancaRepository.findByCodigo("codigo_cobranca")).thenReturn(Optional.of(cobranca));
 
-        assertEquals("Pagamento Excedente", resultado.getPagamentos().get(0).getStatus());
-        verify(sqsService, times(1)).enviarMensagem(anyString(), eq("Pagamento Excedente"));
+        processamentoPagamentoService.processarPagamentos(pagamentoRequest);
+
+        assertEquals(PagamentoStatus.EXCEDENTE, pagamento.getStatus());
+        verify(sqsService).enviarMensagem(pagamento.toString(), PagamentoStatus.EXCEDENTE);
     }
 }

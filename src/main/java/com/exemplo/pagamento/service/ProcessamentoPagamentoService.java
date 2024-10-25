@@ -7,6 +7,7 @@ import com.exemplo.pagamento.repository.CobrancaRepository;
 import com.exemplo.pagamento.repository.VendedorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.exemplo.pagamento.domain.PagamentoStatus;
 
 @Service
 public class ProcessamentoPagamentoService {
@@ -29,14 +30,14 @@ public class ProcessamentoPagamentoService {
                     .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
 
             if (pagamento.getValor() < cobranca.getValor()) {
-                pagamento.setStatus("Pagamento Parcial");
-                sqsService.enviarMensagem(pagamento.toString(), "Pagamento Parcial");
+                pagamento.setStatus(PagamentoStatus.PARCIAL);
+                sqsService.enviarMensagem(pagamento.toString(), PagamentoStatus.PARCIAL);
             } else if (pagamento.getValor() == cobranca.getValor()) {
-                pagamento.setStatus("Pagamento Total");
-                sqsService.enviarMensagem(pagamento.toString(), "Pagamento Total");
+                pagamento.setStatus(PagamentoStatus.TOTAL);
+                sqsService.enviarMensagem(pagamento.toString(), PagamentoStatus.TOTAL);
             } else {
-                pagamento.setStatus("Pagamento Excedente");
-                sqsService.enviarMensagem(pagamento.toString(), "Pagamento Excedente");
+                pagamento.setStatus(PagamentoStatus.EXCEDENTE);
+                sqsService.enviarMensagem(pagamento.toString(), PagamentoStatus.EXCEDENTE);
             }
         }
 

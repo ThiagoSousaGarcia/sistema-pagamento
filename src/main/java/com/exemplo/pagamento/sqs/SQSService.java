@@ -4,6 +4,8 @@ import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.exemplo.pagamento.domain.PagamentoStatus;
+
 
 @Service
 public class SQSService {
@@ -14,17 +16,17 @@ public class SQSService {
     private static final String FILA_TOTAL = "url_da_fila_total";
     private static final String FILA_EXCEDENTE = "url_da_fila_excedente";
 
-    public void enviarMensagem(String mensagem, String status) {
+    public void enviarMensagem(String mensagem, PagamentoStatus status) {
         String filaUrl;
 
         switch (status) {
-            case "Pagamento Parcial":
+            case PARCIAL:
                 filaUrl = FILA_PARCIAL;
                 break;
-            case "Pagamento Total":
+            case TOTAL:
                 filaUrl = FILA_TOTAL;
                 break;
-            case "Pagamento Excedente":
+            case EXCEDENTE:
                 filaUrl = FILA_EXCEDENTE;
                 break;
             default:

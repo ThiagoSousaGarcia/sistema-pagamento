@@ -3,7 +3,7 @@ package com.exemplo.pagamento.domain;
 public class Pagamento {
     private String codigoCobranca;
     private double valor;
-    private String status;
+    private PagamentoStatus status; 
 
     public Pagamento() {}
 
@@ -28,11 +28,11 @@ public class Pagamento {
         this.valor = valor;
     }
 
-    public String getStatus() {
-        return status;
+    public PagamentoStatus getStatus() {
+        return status; 
     }
 
-    public void setStatus(String status) {
+    public void setStatus(PagamentoStatus status) {
         this.status = status;
     }
 }
