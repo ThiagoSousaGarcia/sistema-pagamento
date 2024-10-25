@@ -1,4 +1,4 @@
-package com.exemplo.pagamento.domain;
+package com.exemplo.pagamento.dto;
 
 import java.util.List;
 
