@@ -1,15 +1,16 @@
 package com.exemplo.pagamento.service;
 
+import com.exemplo.pagamento.dto.PagamentoResponse;
+import com.exemplo.pagamento.domain.PagamentoRequest;
 import com.exemplo.pagamento.domain.Cobranca;
 import com.exemplo.pagamento.domain.Pagamento;
-import com.exemplo.pagamento.dto.PagamentoRequest;
 import com.exemplo.pagamento.repository.CobrancaRepository;
 import com.exemplo.pagamento.repository.VendedorRepository;
+import com.exemplo.pagamento.sqs.SQSService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -24,31 +25,32 @@ public class ProcessamentoPagamentoService {
     @Autowired
     private SQSService sqsService;
 
-    private static final String URL_DA_FILA_PARCIAL = "URL_DA_FILA_PARCIAL";
-    private static final String URL_DA_FILA_TOTAL = "URL_DA_FILA_TOTAL";
-    private static final String URL_DA_FILA_EXCEDENTE = "URL_DA_FILA_EXCEDENTE";
+    public PagamentoResponse processarPagamento(PagamentoRequest pagamentoRequest) {
+        List<String> listaStatus = new ArrayList<>();
 
-    public ResponseEntity<PagamentoRequest> processarPagamentos(PagamentoRequest request) {
-        if (!vendedorRepository.existsByCodigo(request.getCodigoVendedor())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        if (!vendedorRepository.existsByCodigo(pagamentoRequest.getCodigoVendedor())) {
+            throw new RuntimeException("Vendedor não encontrado.");
         }
 
-        for (Pagamento pagamento : request.getPagamentos()) {
-            Cobranca cobranca = cobrancaRepository.findByCodigo(pagamento.getCodigoCobranca()).orElse(null);
-            if (cobranca == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-            }
+        for (Pagamento pagamento : pagamentoRequest.getPagamentos()) {
+            Cobranca cobranca = cobrancaRepository.findByCodigo(pagamento.getCodigoCobranca())
+                    .orElseThrow(() -> new RuntimeException("Código da cobrança não encontrado."));
 
-            double valorCobranca = cobranca.getValor();
-            if (pagamento.getValorPago() < valorCobranca) {
-                sqsService.enviarMensagem(URL_DA_FILA_PARCIAL, "Pagamento parcial: " + pagamento);
-            } else if (pagamento.getValorPago() == valorCobranca) {
-                sqsService.enviarMensagem(URL_DA_FILA_TOTAL, "Pagamento total: " + pagamento);
+            String status;
+            if (pagamento.getValor() < cobranca.getValor()) {
+                status = "Pagamento Parcial";
+            } else if (pagamento.getValor() == cobranca.getValor()) {
+                status = "Pagamento Total";
             } else {
-                sqsService.enviarMensagem(URL_DA_FILA_EXCEDENTE, "Pagamento excedente: " + pagamento);
+                status = "Pagamento Excedente";
             }
+
+            listaStatus.add(status);
+            sqsService.enviarParaFilaSQS(pagamento, status);
         }
 
-        return ResponseEntity.ok(request);
+        PagamentoResponse response = new PagamentoResponse();
+        response.setStatus(listaStatus);
+        return response;
     }
 }
