@@ -31,7 +31,7 @@ public class PagamentoControllerTest {
         MockitoAnnotations.openMocks(this);
 
         List<Pagamento> pagamentos = new ArrayList<>();
-        pagamentos.add(new Pagamento("cobranca123", 100.0, PagamentoStatus.PARCIAL));
+        pagamentos.add(new Pagamento("cobranca123", 100.0));
 
         pagamentoRequest = new PagamentoRequest("vendedor123", pagamentos);
     }

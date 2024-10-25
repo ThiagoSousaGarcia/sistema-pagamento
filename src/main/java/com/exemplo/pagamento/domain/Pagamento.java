@@ -7,10 +7,9 @@ public class Pagamento {
 
     public Pagamento() {}
 
-    public Pagamento(String codigoCobranca, double valor, PagamentoStatus status) {
+    public Pagamento(String codigoCobranca, double valor) {
         this.codigoCobranca = codigoCobranca;
         this.valor = valor;
-        this.status = status;
     }
 
     public String getCodigoCobranca() {
