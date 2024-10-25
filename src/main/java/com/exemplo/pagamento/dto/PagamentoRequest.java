@@ -1,6 +1,8 @@
 package com.exemplo.pagamento.dto;
 
 import java.util.List;
+import com.exemplo.pagamento.domain.Pagamento;
+
 
 public class PagamentoRequest {
     private String codigoVendedor;
