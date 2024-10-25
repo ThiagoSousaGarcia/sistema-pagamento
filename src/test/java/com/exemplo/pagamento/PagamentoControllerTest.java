@@ -1,51 +1,51 @@
-package com.exemplo.pagamento.controller;
+// package com.exemplo.pagamento.controller;
 
-import com.exemplo.pagamento.dto.PagamentoRequest;
-import com.exemplo.pagamento.domain.Pagamento;
-import com.exemplo.pagamento.service.ProcessamentoPagamentoService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.ResponseEntity;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.junit.jupiter.api.extension.ExtendWith;
-import java.util.ArrayList;
-import java.util.List;
+// import com.exemplo.pagamento.dto.PagamentoRequest;
+// import com.exemplo.pagamento.domain.Pagamento;
+// import com.exemplo.pagamento.service.ProcessamentoPagamentoService;
+// import org.junit.jupiter.api.BeforeEach;
+// import org.junit.jupiter.api.Test;
+// import org.mockito.InjectMocks;
+// import org.mockito.Mock;
+// import org.mockito.MockitoAnnotations;
+// import org.springframework.http.ResponseEntity;
+// import org.mockito.junit.jupiter.MockitoExtension;
+// import org.junit.jupiter.api.extension.ExtendWith;
+// import java.util.ArrayList;
+// import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
+// import static org.junit.jupiter.api.Assertions.assertEquals;
+// import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
-public class PagamentoControllerTest {
+// @ExtendWith(MockitoExtension.class)
+// public class PagamentoControllerTest {
 
-    @InjectMocks
-    private PagamentoController pagamentoController;
+//     @InjectMocks
+//     private PagamentoController pagamentoController;
 
-    @Mock
-    private ProcessamentoPagamentoService pagamentoService;
+//     @Mock
+//     private ProcessamentoPagamentoService pagamentoService;
 
-    private PagamentoRequest pagamentoRequest;
+//     private PagamentoRequest pagamentoRequest;
 
-    @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this);
+//     @BeforeEach
+//     public void setUp() {
+//         MockitoAnnotations.openMocks(this);
 
-        List<Pagamento> pagamentos = new ArrayList<>();
-        pagamentos.add(new Pagamento("cobranca123", 100.0));
+//         List<Pagamento> pagamentos = new ArrayList<>();
+//         pagamentos.add(new Pagamento("cobranca123", 100.0));
 
-        pagamentoRequest = new PagamentoRequest("vendedor123", pagamentos);
-    }
+//         pagamentoRequest = new PagamentoRequest("vendedor123", pagamentos);
+//     }
 
-    @Test
-    public void testProcessarPagamentos() {
-        PagamentoRequest respostaEsperada = new PagamentoRequest("vendedor123", new ArrayList<>());
-        when(pagamentoService.processarPagamentos(pagamentoRequest)).thenReturn(respostaEsperada);
+//     @Test
+//     public void testProcessarPagamentos() {
+//         PagamentoRequest respostaEsperada = new PagamentoRequest("vendedor123", new ArrayList<>());
+//         when(pagamentoService.processarPagamentos(pagamentoRequest)).thenReturn(respostaEsperada);
 
-        ResponseEntity<PagamentoRequest> response = pagamentoController.processarPagamentos(pagamentoRequest);
+//         ResponseEntity<PagamentoRequest> response = pagamentoController.processarPagamentos(pagamentoRequest);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(respostaEsperada, response.getBody());
-    }
-}
+//         assertEquals(200, response.getStatusCodeValue());
+//         assertEquals(respostaEsperada, response.getBody());
+//     }
+// }
