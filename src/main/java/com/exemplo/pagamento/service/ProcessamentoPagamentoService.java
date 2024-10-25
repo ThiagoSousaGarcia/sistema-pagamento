@@ -1,21 +1,15 @@
 package com.exemplo.pagamento.service;
 
-import com.exemplo.pagamento.dto.PagamentoResponse;
-import com.exemplo.pagamento.domain.PagamentoRequest;
 import com.exemplo.pagamento.domain.Cobranca;
+import com.exemplo.pagamento.dto.PagamentoRequest;
 import com.exemplo.pagamento.domain.Pagamento;
 import com.exemplo.pagamento.repository.CobrancaRepository;
 import com.exemplo.pagamento.repository.VendedorRepository;
-import com.exemplo.pagamento.sqs.SQSService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Service
 public class ProcessamentoPagamentoService {
-
     @Autowired
     private CobrancaRepository cobrancaRepository;
 
@@ -25,32 +19,27 @@ public class ProcessamentoPagamentoService {
     @Autowired
     private SQSService sqsService;
 
-    public PagamentoResponse processarPagamento(PagamentoRequest pagamentoRequest) {
-        List<String> listaStatus = new ArrayList<>();
-
+    public PagamentoRequest processarPagamentos(PagamentoRequest pagamentoRequest) {
         if (!vendedorRepository.existsByCodigo(pagamentoRequest.getCodigoVendedor())) {
-            throw new RuntimeException("Vendedor não encontrado.");
+            throw new RuntimeException("Vendedor não encontrado");
         }
 
         for (Pagamento pagamento : pagamentoRequest.getPagamentos()) {
             Cobranca cobranca = cobrancaRepository.findByCodigo(pagamento.getCodigoCobranca())
-                    .orElseThrow(() -> new RuntimeException("Código da cobrança não encontrado."));
+                    .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
 
-            String status;
             if (pagamento.getValor() < cobranca.getValor()) {
-                status = "Pagamento Parcial";
+                pagamento.setStatus("Parcial");
+                sqsService.enviarMensagem(pagamento.toString(), "Parcial");
             } else if (pagamento.getValor() == cobranca.getValor()) {
-                status = "Pagamento Total";
+                pagamento.setStatus("Total");
+                sqsService.enviarMensagem(pagamento.toString(), "Total");
             } else {
-                status = "Pagamento Excedente";
+                pagamento.setStatus("Excedente");
+                sqsService.enviarMensagem(pagamento.toString(), "Excedente");
             }
-
-            listaStatus.add(status);
-            sqsService.enviarParaFilaSQS(pagamento, status);
         }
 
-        PagamentoResponse response = new PagamentoResponse();
-        response.setStatus(listaStatus);
-        return response;
+        return pagamentoRequest;
     }
 }

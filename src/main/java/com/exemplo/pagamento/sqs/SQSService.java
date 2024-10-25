@@ -1,41 +1,37 @@
-package com.exemplo.pagamento.sqs;
+package com.exemplo.pagamento.service;
 
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
-import com.exemplo.pagamento.domain.Pagamento;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SQSService {
-
     @Autowired
-    private AmazonSQS amazonSQS;
+    private AmazonSQS sqs;
 
-    // URLs das filas SQS
-    private static final String QUEUE_URL_PARCIAL = "url_parcial";
-    private static final String QUEUE_URL_TOTAL = "url_total";
-    private static final String QUEUE_URL_EXCEDENTE = "url_excedente";
+    private static final String FILA_PARCIAL = "url_da_fila_parcial";
+    private static final String FILA_TOTAL = "url_da_fila_total";
+    private static final String FILA_EXCEDENTE = "url_da_fila_excedente";
 
-    public void enviarParaFilaSQS(Pagamento pagamento, String status) {
-        String queueUrl;
+    public void enviarMensagem(String mensagem, String status) {
+        String filaUrl;
+
         switch (status) {
             case "Pagamento Parcial":
-                queueUrl = QUEUE_URL_PARCIAL;
+                filaUrl = FILA_PARCIAL;
                 break;
             case "Pagamento Total":
-                queueUrl = QUEUE_URL_TOTAL;
+                filaUrl = FILA_TOTAL;
                 break;
             case "Pagamento Excedente":
-                queueUrl = QUEUE_URL_EXCEDENTE;
+                filaUrl = FILA_EXCEDENTE;
                 break;
             default:
-                throw new IllegalArgumentException("Status desconhecido: " + status);
+                throw new IllegalArgumentException("Status de pagamento inválido.");
         }
 
-        SendMessageRequest sendMsgRequest = new SendMessageRequest()
-                .withQueueUrl(queueUrl)
-                .withMessageBody("Pagamento: " + pagamento.getCodigoCobranca() + ", Status: " + status);
-        amazonSQS.sendMessage(sendMsgRequest);
+        SendMessageRequest sendMessageRequest = new SendMessageRequest(filaUrl, mensagem);
+        sqs.sendMessage(sendMessageRequest);
     }
 }

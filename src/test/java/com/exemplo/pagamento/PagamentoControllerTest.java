@@ -1,22 +1,14 @@
-package com.exemplo.pagamento;
+package com.exemplo.pagamento.controller;
 
-import com.exemplo.pagamento.controller.PagamentoController;
-import com.exemplo.pagamento.domain.PagamentoResponse;
 import com.exemplo.pagamento.domain.PagamentoRequest;
 import com.exemplo.pagamento.service.ProcessamentoPagamentoService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.util.Collections;
+import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
@@ -29,45 +21,44 @@ class PagamentoControllerTest {
     @Mock
     private ProcessamentoPagamentoService processamentoPagamentoService;
 
-    private MockMvc mockMvc;
-
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockMvc = MockMvcBuilders.standaloneSetup(pagamentoController).build();
     }
 
     @Test
-    void deveProcessarPagamentoComSucesso() throws Exception {
-        PagamentoRequest request = new PagamentoRequest("codigoVendedor", Collections.emptyList());
-        PagamentoResponse response = new PagamentoResponse();
-        response.setStatus(Collections.singletonList("Pagamento Total"));
+    void deveRetornarOkParaProcessarPagamentos() {
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("vendedor1", Collections.emptyList());
 
-        when(processamentoPagamentoService.processarPagamento(request)).thenReturn(response);
+        when(processamentoPagamentoService.processarPagamentos(pagamentoRequest)).thenReturn(pagamentoRequest);
 
-        MvcResult result = mockMvc.perform(
-                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/pagamentos")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(new ObjectMapper().writeValueAsString(request))
-        ).andReturn();
+        ResponseEntity<PagamentoRequest> response = pagamentoController.processarPagamentos(pagamentoRequest);
 
-        assertEquals(HttpStatus.OK.value(), result.getResponse().getStatus());
-        assertEquals(new ObjectMapper().writeValueAsString(response), result.getResponse().getContentAsString());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(pagamentoRequest, response.getBody());
     }
 
     @Test
-    void deveRetornarErroQuandoVendedorNaoEncontrado() throws Exception {
-        PagamentoRequest request = new PagamentoRequest("codigoInexistente", Collections.emptyList());
+    void deveRetornarNotFoundQuandoVendedorNaoEncontrado() {
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("vendedor_inexistente", Collections.emptyList());
 
-        when(processamentoPagamentoService.processarPagamento(request)).thenThrow(new RuntimeException("Vendedor não encontrado."));
+        when(processamentoPagamentoService.processarPagamentos(pagamentoRequest)).thenThrow(new ResourceNotFoundException("Vendedor não encontrado"));
 
-        MvcResult result = mockMvc.perform(
-                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/pagamentos")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(new ObjectMapper().writeValueAsString(request))
-        ).andReturn();
+        ResponseEntity<Object> response = pagamentoController.processarPagamentos(pagamentoRequest);
 
-        assertEquals(HttpStatus.BAD_REQUEST.value(), result.getResponse().getStatus());
-        assertEquals("Vendedor não encontrado.", result.getResponse().getContentAsString());
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("Vendedor não encontrado", response.getBody());
+    }
+
+    @Test
+    void deveRetornarNotFoundQuandoCobrancaNaoEncontrada() {
+        PagamentoRequest pagamentoRequest = new PagamentoRequest("vendedor1", Collections.singletonList(new Pagamento("cobranca_inexistente", 100)));
+
+        when(processamentoPagamentoService.processarPagamentos(pagamentoRequest)).thenThrow(new ResourceNotFoundException("Cobrança não encontrada"));
+
+        ResponseEntity<Object> response = pagamentoController.processarPagamentos(pagamentoRequest);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("Cobrança não encontrada", response.getBody());
     }
 }

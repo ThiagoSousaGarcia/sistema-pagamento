@@ -1,25 +1,20 @@
 package com.exemplo.pagamento.controller;
 
 import com.exemplo.pagamento.dto.PagamentoRequest;
-import com.exemplo.pagamento.dto.PagamentoResponse;
-import com.exemplo.pagamento.service.ProcessamentoPagamentoService;
-import org.springframework.http.HttpStatus;
+import com.exemplo.pagamento.service.PagamentoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/pagamentos")
 public class PagamentoController {
-
-    private final ProcessamentoPagamentoService processamentoPagamentoService;
-
-    public PagamentoController(ProcessamentoPagamentoService processamentoPagamentoService) {
-        this.processamentoPagamentoService = processamentoPagamentoService;
-    }
+    @Autowired
+    private PagamentoService pagamentoService;
 
     @PostMapping
-    public ResponseEntity<PagamentoResponse> processarPagamento(@RequestBody PagamentoRequest pagamentoRequest) {
-        PagamentoResponse response = processamentoPagamentoService.processarPagamento(pagamentoRequest);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<PagamentoRequest> processarPagamentos(@RequestBody PagamentoRequest pagamentoRequest) {
+        PagamentoRequest resposta = pagamentoService.processarPagamentos(pagamentoRequest);
+        return ResponseEntity.ok(resposta);
     }
 }
