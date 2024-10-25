@@ -29,14 +29,14 @@ public class ProcessamentoPagamentoService {
                     .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
 
             if (pagamento.getValor() < cobranca.getValor()) {
-                pagamento.setStatus("Parcial");
-                sqsService.enviarMensagem(pagamento.toString(), "Parcial");
+                pagamento.setStatus("Pagamento Parcial");
+                sqsService.enviarMensagem(pagamento.toString(), "Pagamento Parcial");
             } else if (pagamento.getValor() == cobranca.getValor()) {
-                pagamento.setStatus("Total");
-                sqsService.enviarMensagem(pagamento.toString(), "Total");
+                pagamento.setStatus("Pagamento Total");
+                sqsService.enviarMensagem(pagamento.toString(), "Pagamento Total");
             } else {
-                pagamento.setStatus("Excedente");
-                sqsService.enviarMensagem(pagamento.toString(), "Excedente");
+                pagamento.setStatus("Pagamento Excedente");
+                sqsService.enviarMensagem(pagamento.toString(), "Pagamento Excedente");
             }
         }
 
